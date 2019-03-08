@@ -1,21 +1,46 @@
 # FluminusCLI
 
-**TODO: Add description**
+[![Build Status](https://travis-ci.com/indocomsoft/fluminus_cli.svg?branch=master)](https://travis-ci.com/indocomsoft/fluminus_cli)
+[![Coverage Status](https://coveralls.io/repos/github/indocomsoft/fluminus_cli/badge.svg?branch=master)](https://coveralls.io/github/indocomsoft/fluminus_cli?branch=master)
 
-## Installation
+<sup><sub>F LumiNUS! IVLE ftw! Why fix what ain't broken?!</sub></sup>
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `fluminus_cli` to your list of dependencies in `mix.exs`:
+Since IVLE will be deprecated next academic year (AY2019/2020), while LumiNUS has consistently pushed back its schedule to release an API, I have decided to reverse-engineer the API used by the Angular front-end of LumiNUS. Currently, my goal is to be able to automatically download files a la [ivle-sync](https://github.com/goweiwen/ivle-sync), which is achieved as of v0.1.0!
 
-```elixir
-def deps do
-  [
-    {:fluminus_cli, "~> 0.1.0"}
-  ]
-end
+I try to keep to best coding practices and use as little dependencies as possible. Do let me know if you have any suggestions!
+
+PR's are welcome.
+
+![demo](demo.gif)
+
+## CLI Usage
+The most important one, to download your files:
+
+```bash
+mkdir /tmp/fluminus
+mix fluminus --download-to=/tmp/fluminus
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/fluminus_cli](https://hexdocs.pm/fluminus_cli).
+This will download files of all your modules locally to the directory you speficied. To download all files again next time, simply do:
+
+```bash
+mix fluminus --download-to=/tmp/fluminus
+```
+
+
+## Installation
+### CLI
+1. Install elixir+erlang for your platform
+2. Clone this repo
+3. Get the dependencies:
+```bash
+mix deps.get
+```
+4. Fluminus CLI is available as a mix task:
+```bash
+mix fluminus
+```
+
+Note that the first time running the mix task might be a bit slow because
+the code has to be compiled first.
 
