@@ -35,7 +35,7 @@ defmodule FluminusCLI.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:fluminus, "~> 0.2.2"},
+      {:fluminus, "~> 0.2.3"},
       {:jason, "~> 1.1"},
       {:dialyxir, "~> 1.0.0-rc.4", only: :dev, runtime: false},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
