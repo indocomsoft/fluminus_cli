@@ -140,16 +140,17 @@ defmodule FluminusCLI do
   defp save_credentials(username, password) when is_binary(username) and is_binary(password) do
     data = %{username: username, password: password}
 
-    with {:exists, false} <- {:exists, Elixir.File.exists?(@config_file)},
-         true <-
-           confirm?(
-             "Do you want to store your credential? (WARNING: they are stored in plain text) [y/n]"
-           ),
+    with {:write?, true} <-
+           {:write?,
+            not Elixir.File.exists?(@config_file) and
+              confirm?(
+                "Do you want to store your credential? (WARNING: they are stored in plain text) [y/n]"
+              )},
          {:ok, encoded} <- Jason.encode(data),
-         :ok <- Elixir.File.write("config.json", encoded) do
+         :ok <- Elixir.File.write(@config_file, encoded) do
       :ok
     else
-      {:exists, true} ->
+      {:write?, false} ->
         :ok
 
       {:error, reason} ->
