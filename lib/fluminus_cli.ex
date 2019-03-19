@@ -34,8 +34,9 @@ defmodule FluminusCLI do
         strict: [announcements: :boolean, files: :boolean, download_to: :string]
       )
 
-    IO.puts("Hi #{Fluminus.API.name(auth)}")
-    modules = Fluminus.API.modules(auth, true)
+    {:ok, name} = Fluminus.API.name(auth)
+    IO.puts("Hi #{name}")
+    {:ok, modules} = Fluminus.API.modules(auth, true)
     IO.puts("You are taking:")
     modules |> Enum.filter(&(not &1.teaching?)) |> Enum.each(&IO.puts("- #{&1.code} #{&1.name}"))
     IO.puts("And teaching:")
@@ -56,9 +57,8 @@ defmodule FluminusCLI do
       for mod <- modules do
         IO.puts("## #{mod.code}\n")
 
-        mod
-        |> File.from_module(auth)
-        |> download_file(auth, path)
+        {:ok, file} = File.from_module(mod, auth)
+        download_file(file, auth, path)
 
         IO.puts("\n")
       end
@@ -73,9 +73,10 @@ defmodule FluminusCLI do
     if file.directory? do
       Elixir.File.mkdir_p!(destination)
 
-      file.children
-      |> Enum.map(&File.load_children(&1, auth))
-      |> Enum.each(&download_file(&1, auth, destination))
+      Enum.each(file.children, fn child ->
+        {:ok, child} = File.load_children(child, auth)
+        download_file(child, auth, destination)
+      end)
     else
       case File.download(file, auth, path) do
         :ok -> IO.puts("Downloaded to #{destination}")
@@ -91,7 +92,9 @@ defmodule FluminusCLI do
     for mod <- modules do
       IO.puts("## #{mod.code} #{mod.name}")
 
-      mod |> File.from_module(auth) |> list_file(auth)
+      {:ok, file} = File.from_module(mod, auth)
+      list_file(file, auth)
+
       IO.puts("")
     end
   end
@@ -102,7 +105,9 @@ defmodule FluminusCLI do
     for mod <- modules do
       IO.puts("## #{mod.code} #{mod.name}")
 
-      for {title, description} <- Fluminus.API.Module.announcements(mod, auth) do
+      {:ok, announcements} = Fluminus.API.Module.announcements(mod, auth)
+
+      for %{title: title, description: description} <- announcements do
         IO.puts("=== #{title} ===")
         IO.puts(description)
       end
@@ -175,9 +180,10 @@ defmodule FluminusCLI do
 
   defp list_file(file, auth, prefix) when is_binary(prefix) do
     if file.directory? do
-      file.children
-      |> Enum.map(&File.load_children(&1, auth))
-      |> Enum.each(&list_file(&1, auth, "#{prefix}/#{file.name}"))
+      Enum.each(file.children, fn child ->
+        {:ok, child} = File.load_children(child, auth)
+        list_file(child, auth, "#{prefix}/#{file.name}")
+      end)
     else
       IO.puts("#{prefix}/#{file.name}")
     end
