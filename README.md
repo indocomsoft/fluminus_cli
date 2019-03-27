@@ -13,6 +13,9 @@ PR's are welcome.
 
 ![demo](demo.gif)
 
+## Note for Windows Users
+FluminusCLI is currently not compatible with Windows. I suggest using Fluminurs instead if all you need is file downloading: https://github.com/indocomsoft/fluminurs
+
 ## CLI Usage
 The most important one, to download your files:
 
