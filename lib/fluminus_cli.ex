@@ -12,7 +12,7 @@ defmodule FluminusCLI do
     HTTPoison.start()
     {username, password} = load_credentials()
 
-    case Authorization.jwt(username, password) do
+    case Authorization.vafs_jwt(username, password) do
       {:ok, auth} ->
         save_credentials(username, password)
         run(args, auth)
