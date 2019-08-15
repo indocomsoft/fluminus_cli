@@ -123,7 +123,7 @@ defmodule FluminusCLI do
       {decoded["username"], decoded["password"]}
     else
       _ ->
-        username = IO.gets("username: ") |> String.trim()
+        username = IO.gets("username (including nusstu\\ prefix): ") |> String.trim()
         password = password_get("password: ") |> String.trim()
         {username, password}
     end
