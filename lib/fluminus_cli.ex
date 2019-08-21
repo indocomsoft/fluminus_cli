@@ -24,6 +24,8 @@ defmodule FluminusCLI do
 
       {:error, error} ->
         IO.puts("Error: #{inspect(error)}")
+        IO.puts("Retrying")
+        run(args)
     end
   end
 
@@ -56,12 +58,16 @@ defmodule FluminusCLI do
     if Elixir.File.exists?(path) do
       modules
       |> Enum.map(fn mod ->
-        Task.async(fn ->
-          {:ok, file} = File.from_module(mod, auth)
-          tasks = download_file(file, auth, path)
+        GenRetry.Task.async(
+          fn ->
+            {:ok, file} = File.from_module(mod, auth)
+            tasks = download_file(file, auth, path)
 
-          Enum.each(tasks, &Task.await(&1, :infinity))
-        end)
+            Enum.each(tasks, &Task.await(&1, :infinity))
+          end,
+          retries: 10,
+          delay: 0
+        )
       end)
       |> Enum.each(&Task.await(&1, :infinity))
     else
@@ -75,8 +81,19 @@ defmodule FluminusCLI do
     if file.directory? do
       Elixir.File.mkdir_p!(destination)
 
-      Enum.reduce(file.children, tasks, fn child, acc ->
-        {:ok, child} = File.load_children(child, auth)
+      file.children
+      |> Enum.map(fn child ->
+        GenRetry.Task.async(
+          fn ->
+            {:ok, child} = File.load_children(child, auth)
+            child
+          end,
+          retries: 10,
+          delay: 0
+        )
+      end)
+      |> Enum.reduce(tasks, fn task, acc ->
+        child = Task.await(task, :infinity)
         download_file(child, auth, destination, acc)
       end)
     else
