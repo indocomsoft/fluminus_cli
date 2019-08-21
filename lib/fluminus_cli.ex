@@ -54,35 +54,51 @@ defmodule FluminusCLI do
     IO.puts("Download to #{path}")
 
     if Elixir.File.exists?(path) do
-      for mod <- modules do
-        IO.puts("## #{mod.code}\n")
+      modules
+      |> Enum.map(fn mod ->
+        Task.async(fn ->
+          {:ok, file} = File.from_module(mod, auth)
+          tasks = download_file(file, auth, path)
 
-        {:ok, file} = File.from_module(mod, auth)
-        download_file(file, auth, path)
-
-        IO.puts("\n")
-      end
+          Enum.each(tasks, &Task.await(&1, :infinity))
+        end)
+      end)
+      |> Enum.each(&Task.await(&1, :infinity))
     else
       IO.puts("Download destination does not exist!")
     end
   end
 
-  defp download_file(file, auth, path) do
+  defp download_file(file, auth, path, tasks \\ []) do
     destination = Path.join(path, file.name)
 
     if file.directory? do
       Elixir.File.mkdir_p!(destination)
 
-      Enum.each(file.children, fn child ->
+      Enum.reduce(file.children, tasks, fn child, acc ->
         {:ok, child} = File.load_children(child, auth)
-        download_file(child, auth, destination)
+        download_file(child, auth, destination, acc)
       end)
     else
-      case File.download(file, auth, path) do
-        :ok -> IO.puts("Downloaded to #{destination}")
-        {:error, :exists} -> :ok
-        {:error, reason} -> IO.puts("Unable to download to #{destination}, reason: #{reason}")
-      end
+      task =
+        GenRetry.Task.async(
+          fn ->
+            case File.download(file, auth, path) do
+              :ok ->
+                IO.puts("Downloaded to #{destination}")
+
+              {:error, :exists} ->
+                :ok
+
+              {:error, reason} ->
+                IO.puts("Unable to download to #{destination}, reason: #{reason}")
+            end
+          end,
+          retries: 10,
+          delay: 0
+        )
+
+      [task | tasks]
     end
   end
 
