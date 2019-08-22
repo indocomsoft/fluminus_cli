@@ -122,14 +122,23 @@ defmodule FluminusCLI do
   defp list_files(auth, modules) do
     IO.puts("\n# Files:\n")
 
-    for mod <- modules do
+    modules
+    |> Enum.map(fn mod ->
+      task =
+        GenRetry.Task.async(fn ->
+          {:ok, file} = File.from_module(mod, auth)
+          file
+        end)
+
+      {mod, task}
+    end)
+    |> Enum.each(fn {mod, task} ->
+      file = Task.await(task, :infinity)
+
       IO.puts("## #{mod.code} #{mod.name}")
-
-      {:ok, file} = File.from_module(mod, auth)
       list_file(file, auth)
-
       IO.puts("")
-    end
+    end)
   end
 
   defp list_announcements(auth, modules) do
@@ -213,8 +222,15 @@ defmodule FluminusCLI do
 
   defp list_file(file, auth, prefix) when is_binary(prefix) do
     if file.directory? do
-      Enum.each(file.children, fn child ->
-        {:ok, child} = File.load_children(child, auth)
+      file.children
+      |> Enum.map(fn child ->
+        GenRetry.Task.async(fn ->
+          {:ok, child} = File.load_children(child, auth)
+          child
+        end)
+      end)
+      |> Enum.each(fn task ->
+        child = Task.await(task, :infinity)
         list_file(child, auth, "#{prefix}/#{file.name}")
       end)
     else
