@@ -6,7 +6,7 @@ defmodule FluminusCLI do
   @config_file "config.json"
 
   alias Fluminus.API.{File, Module}
-  alias Fluminus.API.Module.Lesson
+  alias Fluminus.API.Module.{Lesson, Weblecture}
   alias Fluminus.{Authorization, Util}
 
   def run(args) do
@@ -39,7 +39,8 @@ defmodule FluminusCLI do
           files: :boolean,
           download_to: :string,
           lessons: :boolean,
-          webcasts: :boolean
+          webcasts: :boolean,
+          verbose: :boolean
         ]
       )
 
@@ -98,7 +99,20 @@ defmodule FluminusCLI do
                 )
               end
 
-            [file_task, lesson_files_task]
+            webcast_task =
+              if include_webcasts do
+                GenRetry.Task.async(
+                  fn ->
+                    {:ok, webcasts} = Module.weblectures(mod, auth)
+                    tasks = download_webcasts(webcasts, auth, mod, path, verbose)
+                    Enum.each(tasks, &Task.await(&1, :infinity))
+                  end,
+                  retries: 10,
+                  delay: 0
+                )
+              end
+
+            [file_task, lesson_files_task, webcast_task]
             |> Enum.filter(&(&1 != nil))
             |> Enum.each(&Task.await(&1, :infinity))
           end,
@@ -110,6 +124,37 @@ defmodule FluminusCLI do
     else
       IO.puts("Download destination does not exist!")
     end
+  end
+
+  defp download_webcasts(webcasts, auth = %Authorization{}, %Module{code: code}, path, verbose)
+       when is_list(webcasts) do
+    destination = path |> Path.join(Util.sanitise_filename(code)) |> Path.join("Webcasts")
+    Elixir.File.mkdir_p!(destination)
+
+    Enum.map(webcasts, fn webcast = %Weblecture{name: name} ->
+      GenRetry.Task.async(
+        fn ->
+          webcast_final_destination =
+            Path.join(destination, "#{Util.sanitise_filename(name)}.mp4")
+
+          webcast_tmp_destination = Path.join("/tmp", "#{Util.sanitise_filename(name)}.mp4")
+
+          if not Elixir.File.exists?(webcast_final_destination) do
+            Elixir.File.rm_rf!(webcast_tmp_destination)
+
+            if verbose, do: IO.puts("Starting download of webcast #{name}")
+
+            case Weblecture.download(webcast, auth, "/tmp", verbose) do
+              :ok ->
+                Elixir.File.rename(webcast_tmp_destination, webcast_final_destination)
+                IO.puts("Downloaded to #{webcast_final_destination}")
+            end
+          end
+        end,
+        retries: 10,
+        delay: 1_000
+      )
+    end)
   end
 
   defp download_lesson_files(
@@ -125,33 +170,44 @@ defmodule FluminusCLI do
     Elixir.File.mkdir_p!(destination)
 
     Enum.map(lessons, fn lesson = %Lesson{name: name, week: week} ->
-      GenRetry.Task.async(fn ->
-        dir_name = Util.sanitise_filename("#{week} - #{name}")
-        lesson_destination = Path.join(destination, dir_name)
+      GenRetry.Task.async(
+        fn ->
+          dir_name = Util.sanitise_filename("#{week} - #{name}")
+          lesson_destination = Path.join(destination, dir_name)
 
-        Elixir.File.mkdir_p!(lesson_destination)
+          Elixir.File.mkdir_p!(lesson_destination)
 
-        {:ok, files} = Lesson.files(lesson, auth)
+          {:ok, files} = Lesson.files(lesson, auth)
 
-        files
-        |> Enum.map(fn file ->
-          GenRetry.Task.async(fn ->
-            file_lesson_destination = Path.join(lesson_destination, file.name)
+          files
+          |> Enum.map(fn file ->
+            GenRetry.Task.async(
+              fn ->
+                file_lesson_destination = Path.join(lesson_destination, file.name)
+                file_tmp_lesson_destination = Path.join("/tmp", file.name)
 
-            case File.download(file, auth, lesson_destination, verbose) do
-              :ok ->
-                IO.puts("Downloaded to #{file_lesson_destination}")
+                if not Elixir.File.exists?(file_lesson_destination) do
+                  Elixir.File.rm_rf!(file_tmp_lesson_destination)
 
-              {:error, :exists} ->
-                :ok
+                  case File.download(file, auth, "/tmp", verbose) do
+                    :ok ->
+                      Elixir.File.rename(file_tmp_lesson_destination, file_lesson_destination)
+                      IO.puts("Downloaded to #{file_lesson_destination}")
 
-              _ ->
-                IO.puts("Unable to download '#{file.name}', probably a multimedia file?")
-            end
+                    _ ->
+                      IO.puts("Unable to download '#{file.name}', probably a multimedia file?")
+                  end
+                end
+              end,
+              retries: 10,
+              delay: 0
+            )
           end)
-        end)
-        |> Enum.each(&Task.await(&1, :infinity))
-      end)
+          |> Enum.each(&Task.await(&1, :infinity))
+        end,
+        retries: 10,
+        delay: 0
+      )
     end)
   end
 
@@ -180,12 +236,18 @@ defmodule FluminusCLI do
       task =
         GenRetry.Task.async(
           fn ->
-            case File.download(file, auth, path) do
-              :ok ->
-                IO.puts("Downloaded to #{destination}")
+            tmp_destination = Path.join("/tmp", file.name)
 
-              {:error, :exists} ->
-                :ok
+            if not Elixir.File.exists?(destination) do
+              Elixir.File.rm_rf!(tmp_destination)
+
+              case File.download(file, auth, path) do
+                :ok ->
+                  IO.puts("Downloaded to #{destination}")
+
+                {:error, :exists} ->
+                  :ok
+              end
             end
           end,
           retries: 10,
@@ -202,10 +264,14 @@ defmodule FluminusCLI do
     modules
     |> Enum.map(fn mod ->
       task =
-        GenRetry.Task.async(fn ->
-          {:ok, file} = File.from_module(mod, auth)
-          file
-        end)
+        GenRetry.Task.async(
+          fn ->
+            {:ok, file} = File.from_module(mod, auth)
+            file
+          end,
+          retries: 10,
+          delay: 0
+        )
 
       {mod, task}
     end)
