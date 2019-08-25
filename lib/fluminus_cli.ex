@@ -133,28 +133,36 @@ defmodule FluminusCLI do
 
     Enum.map(webcasts, fn webcast = %Weblecture{name: name} ->
       GenRetry.Task.async(
-        fn ->
-          webcast_final_destination =
-            Path.join(destination, "#{Util.sanitise_filename(name)}.mp4")
-
-          webcast_tmp_destination = Path.join("/tmp", "#{Util.sanitise_filename(name)}.mp4")
-
-          if not Elixir.File.exists?(webcast_final_destination) do
-            Elixir.File.rm_rf!(webcast_tmp_destination)
-
-            if verbose, do: IO.puts("Starting download of webcast #{name}")
-
-            case Weblecture.download(webcast, auth, "/tmp", verbose) do
-              :ok ->
-                Elixir.File.rename(webcast_tmp_destination, webcast_final_destination)
-                IO.puts("Downloaded to #{webcast_final_destination}")
-            end
-          end
-        end,
+        fn -> download_webcast_wrapper(webcast, auth, destination, name, verbose) end,
         retries: 10,
         delay: 1_000
       )
     end)
+  end
+
+  defp download_webcast_wrapper(
+         webcast = %Weblecture{},
+         auth = %Authorization{},
+         destination,
+         name,
+         verbose
+       )
+       when is_binary(name) do
+    webcast_final_destination = Path.join(destination, "#{Util.sanitise_filename(name)}.mp4")
+
+    webcast_tmp_destination = Path.join("/tmp", "#{Util.sanitise_filename(name)}.mp4")
+
+    if not Elixir.File.exists?(webcast_final_destination) do
+      Elixir.File.rm_rf!(webcast_tmp_destination)
+
+      if verbose, do: IO.puts("Starting download of webcast #{name}")
+
+      case Weblecture.download(webcast, auth, "/tmp", verbose) do
+        :ok ->
+          Elixir.File.rename(webcast_tmp_destination, webcast_final_destination)
+          IO.puts("Downloaded to #{webcast_final_destination}")
+      end
+    end
   end
 
   defp download_lesson_files(
@@ -169,46 +177,77 @@ defmodule FluminusCLI do
 
     Elixir.File.mkdir_p!(destination)
 
-    Enum.map(lessons, fn lesson = %Lesson{name: name, week: week} ->
-      GenRetry.Task.async(
-        fn ->
-          dir_name = Util.sanitise_filename("#{week} - #{name}")
-          lesson_destination = Path.join(destination, dir_name)
+    Enum.map(lessons, &download_lesson_files(&1, auth, verbose, destination))
+  end
 
-          Elixir.File.mkdir_p!(lesson_destination)
+  defp download_lesson_files(
+         lesson = %Lesson{name: name, week: week},
+         auth = %Authorization{},
+         verbose,
+         destination
+       )
+       when is_boolean(verbose) do
+    GenRetry.Task.async(
+      fn ->
+        dir_name = Util.sanitise_filename("#{week} - #{name}")
+        lesson_destination = Path.join(destination, dir_name)
 
-          {:ok, files} = Lesson.files(lesson, auth)
+        Elixir.File.mkdir_p!(lesson_destination)
 
-          files
-          |> Enum.map(fn file ->
-            GenRetry.Task.async(
-              fn ->
-                file_lesson_destination = Path.join(lesson_destination, file.name)
-                file_tmp_lesson_destination = Path.join("/tmp", file.name)
+        {:ok, files} = Lesson.files(lesson, auth)
 
-                if not Elixir.File.exists?(file_lesson_destination) do
-                  Elixir.File.rm_rf!(file_tmp_lesson_destination)
+        files
+        |> Enum.map(fn file ->
+          GenRetry.Task.async(
+            fn -> download_file_wrapper(file, lesson_destination, auth, verbose, false) end,
+            retries: 10,
+            delay: 0
+          )
+        end)
+        |> Enum.each(&Task.await(&1, :infinity))
+      end,
+      retries: 10,
+      delay: 0
+    )
+  end
 
-                  case File.download(file, auth, "/tmp", verbose) do
-                    :ok ->
-                      Elixir.File.rename(file_tmp_lesson_destination, file_lesson_destination)
-                      IO.puts("Downloaded to #{file_lesson_destination}")
+  @spec download_file_wrapper(
+          File.t(),
+          Path.t(),
+          Authorization.t(),
+          boolean(),
+          boolean(),
+          (() -> any())
+        ) ::
+          :ok
+  defp download_file_wrapper(
+         file = %File{},
+         path,
+         auth = %Authorization{},
+         verbose,
+         retry,
+         pre_download \\ fn -> nil end
+       )
+       when is_boolean(verbose) and is_boolean(retry) do
+    destination = Path.join(path, file.name)
+    tmp_destination = Path.join("/tmp", file.name)
 
-                    _ ->
-                      IO.puts("Unable to download '#{file.name}', probably a multimedia file?")
-                  end
-                end
-              end,
-              retries: 10,
-              delay: 0
-            )
-          end)
-          |> Enum.each(&Task.await(&1, :infinity))
-        end,
-        retries: 10,
-        delay: 0
-      )
-    end)
+    if not Elixir.File.exists?(destination) do
+      Elixir.File.rm_rf!(tmp_destination)
+
+      pre_download.()
+
+      case File.download(file, auth, "/tmp", verbose) do
+        :ok ->
+          Elixir.File.rename(tmp_destination, destination)
+          IO.puts("Downloaded to #{destination}")
+
+        _ ->
+          if retry,
+            do: raise("Non-ok download return"),
+            else: IO.puts("Unable to download '#{file.name}', probably a multimedia file?")
+      end
+    end
   end
 
   defp download_file(file = %File{}, auth = %Authorization{}, path, tasks \\ []) do
@@ -235,21 +274,7 @@ defmodule FluminusCLI do
     else
       task =
         GenRetry.Task.async(
-          fn ->
-            tmp_destination = Path.join("/tmp", file.name)
-
-            if not Elixir.File.exists?(destination) do
-              Elixir.File.rm_rf!(tmp_destination)
-
-              case File.download(file, auth, path) do
-                :ok ->
-                  IO.puts("Downloaded to #{destination}")
-
-                {:error, :exists} ->
-                  :ok
-              end
-            end
-          end,
+          fn -> download_file_wrapper(file, path, auth, false, false) end,
           retries: 10,
           delay: 0
         )
