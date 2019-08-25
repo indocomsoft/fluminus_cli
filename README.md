@@ -16,6 +16,10 @@ PR's are welcome.
 ## Note for Windows Users
 FluminusCLI is currently not compatible with Windows. I suggest using Fluminurs instead if all you need is file downloading: https://github.com/indocomsoft/fluminurs
 
+Mostly this is because fluminus is designed with Unix in mind (use of `/tmp`, file name sanitisation that only looks for null and slash characters, etc.)
+
+If you really need this badly, you can use docker: https://hub.docker.com/r/qjqqyy/fluminus (courtesy @qjqqyy)
+
 ## CLI Usage
 The most important one, to download your files:
 
@@ -29,6 +33,13 @@ This will download files of all your modules locally to the directory you spefic
 ```bash
 mix fluminus --download-to=/tmp/fluminus
 ```
+
+## Features
+- Storing credentials (in plain text though)
+- Listing of mods being taken and taught
+- Syncing of workbin files
+- Syncing of webcasts
+- Syncing of files in weekly lesson plans
 
 
 ## Installation

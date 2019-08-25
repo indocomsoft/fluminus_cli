@@ -2,9 +2,12 @@ defmodule Mix.Tasks.Fluminus do
   @help """
   mix fluminus [OPTIONS]
 
+  --verbose           Enable verbose mode
+
   --announcements     Show announcements
   --files             Show files
   --download-to=PATH  Download files to PATH
+  --webcasts          Download webcasts too (only with --download-to)
   """
 
   @moduledoc """
