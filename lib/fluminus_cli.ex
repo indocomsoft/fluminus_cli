@@ -199,7 +199,7 @@ defmodule FluminusCLI do
         files
         |> Enum.map(fn file ->
           GenRetry.Task.async(
-            fn -> download_file_wrapper(file, lesson_destination, auth, verbose, false) end,
+            fn -> download_file_wrapper(file, lesson_destination, auth, verbose) end,
             retries: 10,
             delay: 0
           )
@@ -216,7 +216,6 @@ defmodule FluminusCLI do
           Path.t(),
           Authorization.t(),
           boolean(),
-          boolean(),
           (() -> any())
         ) ::
           :ok
@@ -225,10 +224,9 @@ defmodule FluminusCLI do
          path,
          auth = %Authorization{},
          verbose,
-         retry,
          pre_download \\ fn -> nil end
        )
-       when is_boolean(verbose) and is_boolean(retry) do
+       when is_boolean(verbose) do
     destination = Path.join(path, file.name)
     tmp_destination = Path.join("/tmp", file.name)
 
@@ -241,11 +239,6 @@ defmodule FluminusCLI do
         :ok ->
           Elixir.File.rename(tmp_destination, destination)
           IO.puts("Downloaded to #{destination}")
-
-        _ ->
-          if retry,
-            do: raise("Non-ok download return"),
-            else: IO.puts("Unable to download '#{file.name}', probably a multimedia file?")
       end
     end
   end
@@ -274,7 +267,7 @@ defmodule FluminusCLI do
     else
       task =
         GenRetry.Task.async(
-          fn -> download_file_wrapper(file, path, auth, false, false) end,
+          fn -> download_file_wrapper(file, path, auth, false) end,
           retries: 10,
           delay: 0
         )
