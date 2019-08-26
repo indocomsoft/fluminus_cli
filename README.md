@@ -40,6 +40,7 @@ mix fluminus --download-to=/tmp/fluminus
 - Syncing of workbin files
 - Syncing of webcasts
 - Syncing of files in weekly lesson plans
+  - This includes downloading of multimedia files using ffmpeg
 
 
 ## Installation
