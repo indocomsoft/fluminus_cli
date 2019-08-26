@@ -43,6 +43,11 @@ mix fluminus --download-to=/tmp/fluminus
 
 
 ## Installation
+### Requirements
+- Elixir (tested with 1.9)
+- Erlang/OTP (tested with 21.3 and 22.0)
+- ffmpeg (optional, only to download multimedia files)
+
 ### CLI
 1. Install elixir+erlang for your platform
 2. Clone this repo
@@ -54,6 +59,8 @@ mix deps.get
 ```bash
 mix fluminus
 ```
+
+5. If you want to download multimedia files in the weekly lesson plans as well, you will need to download ffmpeg
 
 Note that the first time running the mix task might be a bit slow because
 the code has to be compiled first.
