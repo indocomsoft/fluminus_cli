@@ -239,6 +239,9 @@ defmodule FluminusCLI do
         :ok ->
           Elixir.File.rename(tmp_destination, destination)
           IO.puts("Downloaded to #{destination}")
+
+        {:error, :noffmpeg} ->
+          IO.puts("Missing ffmpeg, unable to download multimedia file.")
       end
     end
   end
