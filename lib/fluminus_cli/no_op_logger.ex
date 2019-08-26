@@ -5,9 +5,5 @@ defmodule FluminusCLI.NoOpLogger do
   @behaviour GenRetry.Logger
 
   @impl true
-  def log(_) do
-    text = "An error has occurred. Fluminus will automatically retry 10 times."
-    IO.puts(text)
-    text
-  end
+  def log(_), do: ""
 end

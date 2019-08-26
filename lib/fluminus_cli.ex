@@ -5,6 +5,8 @@ defmodule FluminusCLI do
 
   @config_file "config.json"
 
+  @gen_retry_options [retries: :infinity, delay: 0]
+
   alias Fluminus.API.{File, Module}
   alias Fluminus.API.Module.{Lesson, Weblecture}
   alias Fluminus.{Authorization, Util}
@@ -82,8 +84,7 @@ defmodule FluminusCLI do
                   tasks = download_file(file, auth, path)
                   Enum.each(tasks, &Task.await(&1, :infinity))
                 end,
-                retries: 10,
-                delay: 0
+                @gen_retry_options
               )
 
             lesson_files_task =
@@ -94,8 +95,7 @@ defmodule FluminusCLI do
                     tasks = download_lesson_files(lessons, mod, auth, path, verbose)
                     Enum.each(tasks, &Task.await(&1, :infinity))
                   end,
-                  retries: 10,
-                  delay: 0
+                  @gen_retry_options
                 )
               end
 
@@ -107,8 +107,7 @@ defmodule FluminusCLI do
                     tasks = download_webcasts(webcasts, auth, mod, path, verbose)
                     Enum.each(tasks, &Task.await(&1, :infinity))
                   end,
-                  retries: 10,
-                  delay: 0
+                  @gen_retry_options
                 )
               end
 
@@ -116,8 +115,7 @@ defmodule FluminusCLI do
             |> Enum.filter(&(&1 != nil))
             |> Enum.each(&Task.await(&1, :infinity))
           end,
-          retries: 10,
-          delay: 0
+          @gen_retry_options
         )
       end)
       |> Enum.each(&Task.await(&1, :infinity))
@@ -134,8 +132,7 @@ defmodule FluminusCLI do
     Enum.map(webcasts, fn webcast = %Weblecture{name: name} ->
       GenRetry.Task.async(
         fn -> download_webcast_wrapper(webcast, auth, destination, name, verbose) end,
-        retries: 10,
-        delay: 1_000
+        @gen_retry_options
       )
     end)
   end
@@ -200,14 +197,12 @@ defmodule FluminusCLI do
         |> Enum.map(fn file ->
           GenRetry.Task.async(
             fn -> download_file_wrapper(file, lesson_destination, auth, verbose) end,
-            retries: 10,
-            delay: 0
+            @gen_retry_options
           )
         end)
         |> Enum.each(&Task.await(&1, :infinity))
       end,
-      retries: 10,
-      delay: 0
+      @gen_retry_options
     )
   end
 
@@ -259,8 +254,7 @@ defmodule FluminusCLI do
             {:ok, child} = File.load_children(child, auth)
             child
           end,
-          retries: 10,
-          delay: 0
+          @gen_retry_options
         )
       end)
       |> Enum.reduce(tasks, fn task, acc ->
@@ -271,8 +265,7 @@ defmodule FluminusCLI do
       task =
         GenRetry.Task.async(
           fn -> download_file_wrapper(file, path, auth, false) end,
-          retries: 10,
-          delay: 0
+          @gen_retry_options
         )
 
       [task | tasks]
@@ -290,8 +283,7 @@ defmodule FluminusCLI do
             {:ok, file} = File.from_module(mod, auth)
             file
           end,
-          retries: 10,
-          delay: 0
+          @gen_retry_options
         )
 
       {mod, task}
