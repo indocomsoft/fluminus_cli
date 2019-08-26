@@ -7,7 +7,10 @@ defmodule Mix.Tasks.Fluminus do
   --announcements     Show announcements
   --files             Show files
   --download-to=PATH  Download files to PATH
-  --webcasts          Download webcasts too (only with --download-to)
+
+  Only with --download-to
+  --webcasts          Download webcasts too
+  --lessons           Download files in the weekly lesson plans too
   """
 
   @moduledoc """
