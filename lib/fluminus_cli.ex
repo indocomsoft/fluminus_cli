@@ -156,7 +156,7 @@ defmodule FluminusCLI do
 
       case Weblecture.download(webcast, auth, "/tmp", verbose) do
         :ok ->
-          Elixir.File.rename(webcast_tmp_destination, webcast_final_destination)
+          rename_wrapper(webcast_tmp_destination, webcast_final_destination)
           IO.puts("Downloaded to #{webcast_final_destination}")
       end
     end
@@ -232,12 +232,28 @@ defmodule FluminusCLI do
 
       case File.download(file, auth, "/tmp", verbose) do
         :ok ->
-          Elixir.File.rename(tmp_destination, destination)
+          rename_wrapper(tmp_destination, destination)
           IO.puts("Downloaded to #{destination}")
 
         {:error, :noffmpeg} ->
           IO.puts("Missing ffmpeg, unable to download multimedia file.")
       end
+    end
+  end
+
+  @spec rename_wrapper(Path.t(), Path.t()) :: :ok | {:error, Elixir.File.posix()}
+  defp rename_wrapper(source, destination) do
+    case Elixir.File.rename(source, destination) do
+      {:error, :exdev} ->
+        with :ok <- Elixir.File.cp(source, destination),
+             :ok <- Elixir.File.rm(source) do
+          :ok
+        else
+          error -> error
+        end
+
+      x ->
+        x
     end
   end
 
