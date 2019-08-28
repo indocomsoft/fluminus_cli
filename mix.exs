@@ -4,7 +4,7 @@ defmodule FluminusCLI.MixProject do
   def project do
     [
       app: :fluminus_cli,
-      version: "0.4.9",
+      version: "0.4.10",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
