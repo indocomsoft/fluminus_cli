@@ -10,9 +10,11 @@ defmodule FluminusCLI do
   alias Fluminus.API.{File, Module}
   alias Fluminus.API.Module.{Lesson, Weblecture}
   alias Fluminus.{Authorization, Util}
+  alias FluminusCLI.Constants
 
   def run(args) do
-    HTTPoison.start()
+    initialise()
+
     {username, password} = load_credentials()
 
     case Authorization.vafs_jwt(username, password) do
@@ -32,6 +34,13 @@ defmodule FluminusCLI do
     end
   end
 
+  defp initialise do
+    Application.ensure_all_started(:ets)
+    :ets.new(Constants.ets_table_name(), [:named_table])
+
+    HTTPoison.start()
+  end
+
   @spec run([String.t()], Authorization.t()) :: :ok
   defp run(args, auth = %Authorization{}) do
     {parsed, _, _} =
@@ -42,7 +51,8 @@ defmodule FluminusCLI do
           download_to: :string,
           lessons: :boolean,
           webcasts: :boolean,
-          verbose: :boolean
+          verbose: :boolean,
+          show_errors: :boolean
         ]
       )
 
@@ -56,6 +66,9 @@ defmodule FluminusCLI do
     IO.puts("")
 
     parsed_map = Enum.into(parsed, %{})
+
+    # TODO use GenServer instead
+    :ets.insert(Constants.ets_table_name(), {:show_errors, parsed_map[:show_errors]})
 
     if parsed_map[:announcements], do: list_announcements(auth, modules)
     if parsed_map[:files], do: list_files(auth, modules)

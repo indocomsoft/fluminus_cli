@@ -3,6 +3,7 @@ defmodule Mix.Tasks.Fluminus do
   mix fluminus [OPTIONS]
 
   --verbose           Enable verbose mode
+  --show-errors       Show all errors instead of just swallowing them
 
   --announcements     Show announcements
   --files             Show files
