@@ -5,7 +5,7 @@ defmodule FluminusCLI do
 
   @config_file "config.json"
 
-  @gen_retry_options [retries: :infinity, delay: 0]
+  @gen_retry_options [retries: :infinity, delay: 0, exp_base: 1]
 
   alias Fluminus.API.{File, Module}
   alias Fluminus.API.Module.{Lesson, Weblecture}
