@@ -45,9 +45,9 @@ defmodule FluminusCLI.MixProject do
       {:jason, "~> 1.1"},
       {:gen_retry, "~> 1.2.0"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
+      {:credo, "~> 1.1.2", only: :test, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.1.2", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev, :test], runtime: false}
     ]
   end
 
