@@ -34,6 +34,23 @@ This will download files of all your modules locally to the directory you spefic
 mix fluminus --download-to=/tmp/fluminus
 ```
 
+More information can be found in the help page:
+```bash
+$ mix fluminus --help
+mix fluminus [OPTIONS]
+
+--verbose           Enable verbose mode
+--show-errors       Show all errors instead of just swallowing them
+
+--announcements     Show announcements
+--files             Show files
+--download-to=PATH  Download files to PATH
+
+Only with --download-to
+--webcasts          Download webcasts too
+--lessons           Download files in the weekly lesson plans too
+```
+
 ## Features
 - Storing credentials (in plain text though)
 - Listing of mods being taken and taught
@@ -65,4 +82,3 @@ mix fluminus
 
 Note that the first time running the mix task might be a bit slow because
 the code has to be compiled first.
-
