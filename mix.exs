@@ -42,9 +42,6 @@ defmodule FluminusCLI.MixProject do
   defp deps do
     [
       {:fluminus, "~> 2.0"},
-      # TODO remove when hackney is released and httpoison is updated to use that hackney version
-      {:hackney,
-       github: "benoitc/hackney", ref: "e8bbfc87f2e6256bea46a50ed1bad8b4e25bb66f", override: true},
       {:gen_retry, "~> 1.2.0"},
       {:jason, "~> 1.1"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
