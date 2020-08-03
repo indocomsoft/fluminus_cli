@@ -12,6 +12,7 @@ defmodule Mix.Tasks.Fluminus do
   Only with --download-to
   --webcasts          Download webcasts too
   --lessons           Download files in the weekly lesson plans too
+  --multimedia        Download unanchored multimedia files too
   """
 
   @moduledoc """

@@ -52,7 +52,8 @@ defmodule FluminusCLI do
           lessons: :boolean,
           webcasts: :boolean,
           verbose: :boolean,
-          show_errors: :boolean
+          show_errors: :boolean,
+          multimedia: :boolean
         ]
       )
 
@@ -77,12 +78,21 @@ defmodule FluminusCLI do
       path = parsed_map[:download_to]
       lessons = parsed_map[:lessons]
       webcasts = parsed_map[:webcasts]
+      multimedia = parsed_map[:multimedia]
       verbose = parsed_map[:verbose]
-      download_to(auth, modules, path, verbose, lessons, webcasts)
+      download_to(auth, modules, path, verbose, lessons, webcasts, multimedia)
     end
   end
 
-  defp download_to(auth, modules, path, verbose, include_lessons, include_webcasts) do
+  defp download_to(
+         auth,
+         modules,
+         path,
+         verbose,
+         include_lessons,
+         include_webcasts,
+         include_multimedia
+       ) do
     IO.puts("Download to #{path}")
 
     if Elixir.File.exists?(path) do
@@ -94,7 +104,7 @@ defmodule FluminusCLI do
               GenRetry.Task.async(
                 fn ->
                   {:ok, file} = File.from_module(mod, auth)
-                  tasks = download_file(file, auth, path)
+                  tasks = download_file(file, auth, path, verbose)
                   Enum.each(tasks, &Task.await(&1, :infinity))
                 end,
                 @gen_retry_options
@@ -124,7 +134,26 @@ defmodule FluminusCLI do
                 )
               end
 
-            [file_task, lesson_files_task, webcast_task]
+            multimedia_task =
+              if include_multimedia do
+                GenRetry.Task.async(
+                  fn ->
+                    {:ok, files} = Module.multimedias(mod, auth)
+
+                    files =
+                      Enum.map(files, fn file ->
+                        {:ok, file} = File.load_children(file, auth)
+                        file
+                      end)
+
+                    tasks = download_multimedias(files, auth, mod, path, verbose)
+                    Enum.each(tasks, &Task.await(&1, :infinity))
+                  end,
+                  @gen_retry_options
+                )
+              end
+
+            [file_task, lesson_files_task, webcast_task, multimedia_task]
             |> Enum.filter(&(&1 != nil))
             |> Enum.each(&Task.await(&1, :infinity))
           end,
@@ -135,6 +164,19 @@ defmodule FluminusCLI do
     else
       IO.puts("Download destination does not exist!")
     end
+  end
+
+  defp download_multimedias(
+         files,
+         auth = %Authorization{},
+         %Module{code: code},
+         path,
+         verbose
+       )
+       when is_list(files) do
+    destination = path |> Path.join(Util.sanitise_filename(code)) |> Path.join("Multimedia")
+
+    Enum.flat_map(files, &download_file(&1, auth, destination, verbose))
   end
 
   defp download_webcasts(webcasts, auth = %Authorization{}, %Module{code: code}, path, verbose)
@@ -270,7 +312,7 @@ defmodule FluminusCLI do
     end
   end
 
-  defp download_file(file = %File{}, auth = %Authorization{}, path, tasks \\ []) do
+  defp download_file(file = %File{}, auth = %Authorization{}, path, verbose, tasks \\ []) do
     destination = Path.join(path, file.name)
 
     if file.directory? do
@@ -288,12 +330,12 @@ defmodule FluminusCLI do
       end)
       |> Enum.reduce(tasks, fn task, acc ->
         child = Task.await(task, :infinity)
-        download_file(child, auth, destination, acc)
+        download_file(child, auth, destination, verbose, acc)
       end)
     else
       task =
         GenRetry.Task.async(
-          fn -> download_file_wrapper(file, path, auth, false) end,
+          fn -> download_file_wrapper(file, path, auth, verbose) end,
           @gen_retry_options
         )
 
