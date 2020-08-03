@@ -12,6 +12,8 @@ defmodule FluminusCLI do
   alias Fluminus.{Authorization, Util}
   alias FluminusCLI.Constants
 
+  require Logger
+
   def run(args) do
     initialise()
 
@@ -142,8 +144,17 @@ defmodule FluminusCLI do
 
                     files =
                       Enum.map(files, fn file ->
-                        {:ok, file} = File.load_children(file, auth)
-                        file
+                        case File.load_children(file, auth) do
+                          {:ok, loaded_file} ->
+                            loaded_file
+
+                          {:error, :forbidden} ->
+                            Logger.error(
+                              "#{mod.code} multimedia channel #{file.name} is forbidden, skipping..."
+                            )
+
+                            %File{file | children: []}
+                        end
                       end)
 
                     tasks = download_multimedias(files, auth, mod, path, verbose)
