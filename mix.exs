@@ -41,7 +41,7 @@ defmodule FluminusCLI.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:fluminus, "~> 2.0"},
+      {:fluminus, "~> 2.1"},
       {:gen_retry, "~> 1.2.0"},
       {:jason, "~> 1.1"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
