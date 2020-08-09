@@ -268,11 +268,9 @@ defmodule FluminusCLI do
     if not Elixir.File.exists?(destination) do
       Elixir.File.rm_rf!(tmp_destination)
 
-      case ExternalMultimedia.Child.download(child, "/tmp", verbose) do
-        :ok ->
-          rename_wrapper(tmp_destination, destination)
-          IO.puts("Downloaded to #{destination}")
-      end
+      :ok = ExternalMultimedia.Child.download(child, "/tmp", verbose)
+      rename_wrapper(tmp_destination, destination)
+      IO.puts("Downloaded to #{destination}")
     end
   end
 
@@ -306,11 +304,9 @@ defmodule FluminusCLI do
 
       if verbose, do: IO.puts("Starting download of webcast #{name}")
 
-      case Weblecture.download(webcast, auth, "/tmp", verbose) do
-        :ok ->
-          rename_wrapper(webcast_tmp_destination, webcast_final_destination)
-          IO.puts("Downloaded to #{webcast_final_destination}")
-      end
+      :ok = Weblecture.download(webcast, auth, "/tmp", verbose)
+      rename_wrapper(webcast_tmp_destination, webcast_final_destination)
+      IO.puts("Downloaded to #{webcast_final_destination}")
     end
   end
 
