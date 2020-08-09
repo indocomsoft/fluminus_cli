@@ -8,7 +8,7 @@ defmodule FluminusCLI do
   @gen_retry_options [retries: :infinity, delay: 0, exp_base: 1]
 
   alias Fluminus.API.{File, Module}
-  alias Fluminus.API.Module.{Lesson, Weblecture}
+  alias Fluminus.API.Module.{ExternalMultimedia, Lesson, Weblecture}
   alias Fluminus.{Authorization, Util}
   alias FluminusCLI.Constants
 
@@ -55,7 +55,8 @@ defmodule FluminusCLI do
           webcasts: :boolean,
           verbose: :boolean,
           show_errors: :boolean,
-          multimedia: :boolean
+          multimedia: :boolean,
+          external_multimedia: :boolean
         ]
       )
 
@@ -81,8 +82,19 @@ defmodule FluminusCLI do
       lessons = parsed_map[:lessons]
       webcasts = parsed_map[:webcasts]
       multimedia = parsed_map[:multimedia]
+      external_multimedia = parsed_map[:external_multimedia]
       verbose = parsed_map[:verbose]
-      download_to(auth, modules, path, verbose, lessons, webcasts, multimedia)
+
+      download_to(
+        auth,
+        modules,
+        path,
+        verbose,
+        lessons,
+        webcasts,
+        multimedia,
+        external_multimedia
+      )
     end
   end
 
@@ -93,7 +105,8 @@ defmodule FluminusCLI do
          verbose,
          include_lessons,
          include_webcasts,
-         include_multimedia
+         include_multimedia,
+         include_external_multimedia
        ) do
     IO.puts("Download to #{path}")
 
@@ -136,6 +149,18 @@ defmodule FluminusCLI do
                 )
               end
 
+            external_multimedia_task =
+              if include_external_multimedia do
+                GenRetry.Task.async(
+                  fn ->
+                    {:ok, mms} = Module.external_multimedias(mod, auth)
+                    tasks = download_external_multimedias(mms, auth, mod, path, verbose)
+                    Enum.each(tasks, &Task.await(&1, :infinity))
+                  end,
+                  @gen_retry_options
+                )
+              end
+
             multimedia_task =
               if include_multimedia do
                 GenRetry.Task.async(
@@ -164,7 +189,13 @@ defmodule FluminusCLI do
                 )
               end
 
-            [file_task, lesson_files_task, webcast_task, multimedia_task]
+            [
+              file_task,
+              lesson_files_task,
+              webcast_task,
+              multimedia_task,
+              external_multimedia_task
+            ]
             |> Enum.filter(&(&1 != nil))
             |> Enum.each(&Task.await(&1, :infinity))
           end,
@@ -188,6 +219,61 @@ defmodule FluminusCLI do
     destination = path |> Path.join(Util.sanitise_filename(code)) |> Path.join("Multimedia")
 
     Enum.flat_map(files, &download_file(&1, auth, destination, verbose))
+  end
+
+  defp download_external_multimedias(
+         mms,
+         auth = %Authorization{},
+         %Module{code: code},
+         path,
+         verbose
+       )
+       when is_list(mms) do
+    Enum.map(mms, fn mm = %ExternalMultimedia{name: name} ->
+      destination =
+        path
+        |> Path.join(Util.sanitise_filename(code))
+        |> Path.join("Multimedia")
+        |> Path.join(Util.sanitise_filename(name))
+
+      Elixir.File.mkdir_p!(destination)
+
+      GenRetry.Task.async(
+        fn ->
+          {:ok, children} = ExternalMultimedia.get_children(mm, auth)
+
+          children
+          |> Enum.map(fn child ->
+            GenRetry.Task.async(
+              fn -> download_external_multimedia_wrapper(child, destination, verbose) end,
+              @gen_retry_options
+            )
+          end)
+          |> Enum.each(&Task.await(&1, :infinity))
+        end,
+        @gen_retry_options
+      )
+    end)
+  end
+
+  defp download_external_multimedia_wrapper(
+         child = %ExternalMultimedia.Child{name: name},
+         path,
+         verbose
+       ) do
+    destination = Path.join(path, Util.sanitise_filename(name) <> ".mp4")
+
+    tmp_destination = Path.join("/tmp", Util.sanitise_filename(name) <> ".mp4")
+
+    if not Elixir.File.exists?(destination) do
+      Elixir.File.rm_rf!(tmp_destination)
+
+      case ExternalMultimedia.Child.download(child, "/tmp", verbose) do
+        :ok ->
+          rename_wrapper(tmp_destination, destination)
+          IO.puts("Downloaded to #{destination}")
+      end
+    end
   end
 
   defp download_webcasts(webcasts, auth = %Authorization{}, %Module{code: code}, path, verbose)
