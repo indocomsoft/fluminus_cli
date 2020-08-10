@@ -89,7 +89,8 @@ defmodule FluminusCLI do
         auth,
         modules,
         path,
-        verbose,
+        # force verbose to be boolean
+        !!verbose,
         lessons,
         webcasts,
         multimedia,
