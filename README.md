@@ -41,16 +41,18 @@ More information can be found in the help page:
 $ mix fluminus --help
 mix fluminus [OPTIONS]
 
---verbose           Enable verbose mode
---show-errors       Show all errors instead of just swallowing them
+--verbose             Enable verbose mode
+--show-errors         Show all errors instead of just swallowing them
 
---announcements     Show announcements
---files             Show files
---download-to=PATH  Download files to PATH
+--announcements       Show announcements
+--files               Show files
+--download-to=PATH    Download files to PATH
 
 Only with --download-to
---webcasts          Download webcasts too
---lessons           Download files in the weekly lesson plans too
+--external-multimedia  Download external multimedia files too
+--lessons              Download files in the weekly lesson plans too
+--multimedia           Download unanchored multimedia files too
+--webcasts             Download files in the weekly lesson plans too
 ```
 
 ## Features
@@ -60,6 +62,8 @@ Only with --download-to
 - Syncing of webcasts
 - Syncing of files in weekly lesson plans
   - This includes downloading of multimedia files using ffmpeg
+- Syncing of unanchored multimedia files (under the multimedia tab)
+- Syncing of external multimedia files (stored on panopto)
 
 
 ## Installation
@@ -84,3 +88,7 @@ mix fluminus
 
 Note that the first time running the mix task might be a bit slow because
 the code has to be compiled first.
+
+## Hacking Guide
+To add a new feature for `--download-to`, simply implement your feature as a new module in `lib/fluminus_cli/work/`, implementing `@behaviour FluminusCLI.Work`.
+It will be automatically picked up by `FluminusCLI`, both in argument parsing, processing and help page.
