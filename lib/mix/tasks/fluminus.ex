@@ -10,18 +10,12 @@ defmodule Mix.Tasks.Fluminus do
   --download-to=PATH    Download files to PATH
 
   Only with --download-to
-  --webcasts            Download webcasts too
-  --lessons             Download files in the weekly lesson plans too
-  --multimedia          Download unanchored multimedia files too
-  --external-multimedia Download external multimedia files too
   """
 
   @moduledoc """
   Runs the Fluminus CLI.
 
-  ```
-  #{@help}
-  ```
+  For more information, run: `mix fluminus --help`
   """
 
   @shortdoc "Runs the Fluminus CLI."
@@ -30,9 +24,25 @@ defmodule Mix.Tasks.Fluminus do
 
   def run(args) do
     if "--help" in args or "-h" in args do
-      IO.puts(@help)
+      IO.puts(@help <> download_to_help())
     else
       FluminusCLI.run(args)
     end
+  end
+
+  def download_to_help do
+    kv =
+      Enum.map(FluminusCLI.Work.all_work(), fn work ->
+        option = work.option() |> to_string() |> String.replace("_", "-")
+        {"--#{option}", work.short_doc()}
+      end)
+
+    max_length = kv |> Enum.map(fn {k, _} -> String.length(k) end) |> Enum.max()
+
+    kv
+    |> Enum.map(fn {k, v} ->
+      String.pad_trailing(k, max_length + 2) <> v
+    end)
+    |> Enum.join("\n")
   end
 end
