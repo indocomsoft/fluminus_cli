@@ -64,8 +64,8 @@ Only with --download-to
 
 ## Installation
 ### Requirements
-- Elixir (tested with 1.9)
-- Erlang/OTP (tested with 21.3 and 22.0)
+- Elixir (tested with 1.10)
+- Erlang/OTP (tested with 23.0)
 - ffmpeg (optional, only to download multimedia files)
 
 ### CLI
