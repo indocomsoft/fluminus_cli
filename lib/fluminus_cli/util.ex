@@ -6,6 +6,8 @@ defmodule FluminusCLI.Util do
   alias Fluminus.API
   alias Fluminus.Authorization
 
+  require Logger
+
   @spec rename_wrapper(Path.t(), Path.t()) :: :ok | {:error, Elixir.File.posix()}
   def rename_wrapper(source, destination) do
     case Elixir.File.rename(source, destination) do
@@ -45,6 +47,9 @@ defmodule FluminusCLI.Util do
         :ok ->
           :ok = rename_wrapper(tmp_destination, destination)
           IO.puts("Downloaded to #{destination}")
+
+        {:error, :processing} ->
+          Logger.error("Multimedia #{destination} is still processing, skipping...")
 
         {:error, :noffmpeg} ->
           IO.puts("Missing ffmpeg, unable to download multimedia file.")
