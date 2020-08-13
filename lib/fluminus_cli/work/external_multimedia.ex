@@ -62,6 +62,7 @@ defmodule FluminusCLI.Work.ExternalMultimedia do
     if not File.exists?(destination) do
       {:ok, _} = File.rm_rf(tmp_destination)
 
+      if verbose, do: IO.puts("Starting download of external multimedia #{destination}")
       :ok = ExternalMultimedia.Child.download(child, "/tmp", verbose)
       :ok = rename_wrapper(tmp_destination, destination)
       IO.puts("Downloaded to #{destination}")

@@ -43,6 +43,8 @@ defmodule FluminusCLI.Util do
     if not File.exists?(destination) do
       {:ok, _} = File.rm_rf(tmp_destination)
 
+      if verbose, do: IO.puts("Starting download of file #{destination}")
+
       case API.File.download(file, auth, "/tmp", verbose) do
         :ok ->
           :ok = rename_wrapper(tmp_destination, destination)

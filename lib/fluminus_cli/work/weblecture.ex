@@ -33,7 +33,7 @@ defmodule FluminusCLI.Work.Weblecture do
 
           if not File.exists?(final_destination) do
             {:ok, _} = File.rm_rf(tmp_destination)
-            if verbose, do: IO.puts("Starting download of webcast #{name}")
+            if verbose, do: IO.puts("Starting download of webcast #{final_destination}")
             :ok = Weblecture.download(weblecture, auth, "/tmp", verbose)
             :ok = rename_wrapper(tmp_destination, final_destination)
             IO.puts("Downloaded to #{final_destination}")
