@@ -43,7 +43,7 @@ defmodule FluminusCLI.MixProject do
   defp deps do
     [
       {:fluminus, "~> 2.2"},
-      {:gen_retry, "~> 1.2.0"},
+      {:gen_retry, github: "indocomsoft/gen_retry", branch: "stacktrace"},
       {:jason, "~> 1.1"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
       {:credo, "~> 1.4.0", only: :test, runtime: false},
