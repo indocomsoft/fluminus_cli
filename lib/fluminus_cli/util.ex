@@ -50,6 +50,9 @@ defmodule FluminusCLI.Util do
           :ok = rename_wrapper(tmp_destination, destination)
           IO.puts("Downloaded to #{destination}")
 
+        {:error, {:unexpected_response, %{"fileFormat" => "Weblink"}}} ->
+          Logger.error("Multimedia #{destination} is a weblink, skipping...")
+
         {:error, :processing} ->
           Logger.error("Multimedia #{destination} is still processing, skipping...")
 
