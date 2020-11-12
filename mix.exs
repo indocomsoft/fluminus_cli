@@ -25,7 +25,6 @@ defmodule FluminusCLI.MixProject do
         "coveralls.html": :test
       ],
       dialyzer: [
-        plt_add_apps: [:mix],
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling, :race_conditions, :underspecs, :unmatched_returns]
       ]
@@ -35,7 +34,7 @@ defmodule FluminusCLI.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :mix]
     ]
   end
 
