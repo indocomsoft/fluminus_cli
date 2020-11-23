@@ -7,7 +7,7 @@ Feel free to fork this project, as it was released under the MIT license.
 
 # FluminusCLI
 
-[![Build Status](https://travis-ci.com/indocomsoft/fluminus_cli.svg?branch=master)](https://travis-ci.com/indocomsoft/fluminus_cli)
+![Build Status](https://github.com/indocomsoft/fluminus_cli/workflows/Elixir%20CI/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/indocomsoft/fluminus_cli/badge.svg?branch=master)](https://coveralls.io/github/indocomsoft/fluminus_cli?branch=master)
 
 <sup><sub>F LumiNUS! IVLE ftw! Why fix what ain't broken?!</sub></sup>
